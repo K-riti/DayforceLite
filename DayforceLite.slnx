@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DayforceLite.API/DayforceLite.API.csproj" />
+    <Project Path="src/DayforceLite.Core/DayforceLite.Core.csproj" />
+    <Project Path="src/DayforceLite.Infrastructure/DayforceLite.Infrastructure.csproj" />
+    <Project Path="src/DayforceLite.WCF/DayforceLite.WCF.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DayforceLite.IntegrationTests/DayforceLite.IntegrationTests.csproj" />
+    <Project Path="tests/DayforceLite.UnitTests/DayforceLite.UnitTests.csproj" />
+  </Folder>
+</Solution>

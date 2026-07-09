@@ -1,0 +1,6 @@
+@DayforceLite.API_HostAddress = http://localhost:5160
+
+GET {{DayforceLite.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

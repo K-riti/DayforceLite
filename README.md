@@ -11,13 +11,33 @@
 |---|---|
 | Frontend | Angular 17, TypeScript, jQuery, Bootstrap 5, HTML5/CSS3 |
 | Backend API | ASP.NET Core 8, C#, REST endpoints |
-| Legacy Integration | WCF Service (SOAP endpoints) |
+| Legacy Integration | WCF Service (SOAP endpoints via CoreWCF) |
 | Data Access | ADO.NET (direct SQL), Entity Framework Core |
 | Database | SQL Server 2022 |
 | Search | Elastic Search 8.x |
 | Auth | JWT Bearer tokens, ASP.NET Core Identity |
 | Testing | xUnit, Moq, Testcontainers |
 | DevOps | Docker, docker-compose, GitHub Actions |
+
+---
+
+## Features
+
+### Core Workforce Management
+- **Employee Management** — Full CRUD with Elasticsearch integration for fast search
+- **Timesheet Tracking** — Submit, approve, reject workflow with business rules
+- **Payroll Processing** — Calculate gross/net pay, tax deductions, payroll history
+
+### Enhanced Features
+- **Department Management** — CRUD with employee counts, deletion protection for active departments
+- **Leave/PTO Management** — Request submission, approval workflow, balance tracking per employee/year
+- **Audit Trail** — Automatic logging of all entity changes with user tracking and IP capture
+
+### Technical Highlights
+- Clean Architecture with DI extension methods (`AddCore()`, `AddInfrastructure()`)
+- Global exception handling middleware with structured error responses
+- Health check endpoints for monitoring
+- 74+ unit tests with xUnit and Moq
 
 ---
 
@@ -31,7 +51,12 @@ DayforceLite/
 │   │   │   ├── EmployeeController.cs      # CRUD + search endpoints
 │   │   │   ├── TimesheetController.cs     # Timesheet management
 │   │   │   ├── PayrollController.cs       # Payroll calculation endpoints
-│   │   │   └── AuthController.cs         # JWT login/refresh
+│   │   │   ├── DepartmentController.cs    # Department CRUD + employee counts
+│   │   │   ├── LeaveController.cs         # Leave requests + balance management
+│   │   │   ├── AuditController.cs         # Audit trail queries
+│   │   │   ├── HealthController.cs        # Health/readiness checks
+│   │   │   └── AuthController.cs          # JWT login/refresh
+│   │   ├── DTOs/                          # Request/Response DTOs
 │   │   ├── Middleware/
 │   │   │   ├── ExceptionHandlingMiddleware.cs
 │   │   │   └── RequestLoggingMiddleware.cs
@@ -40,68 +65,137 @@ DayforceLite/
 │   ├── DayforceLite.Core/                 # Business logic layer
 │   │   ├── Models/
 │   │   │   ├── Employee.cs
+│   │   │   ├── Department.cs
 │   │   │   ├── Timesheet.cs
-│   │   │   └── PayrollRecord.cs
+│   │   │   ├── PayrollRecord.cs
+│   │   │   ├── LeaveRequest.cs            # Leave request with workflow status
+│   │   │   ├── LeaveBalance.cs            # Yearly PTO allocations
+│   │   │   └── AuditLog.cs                # Audit trail entries
 │   │   ├── Services/
-│   │   │   ├── IEmployeeService.cs
 │   │   │   ├── EmployeeService.cs
-│   │   │   ├── IPayrollService.cs
-│   │   │   └── PayrollService.cs
-│   │   └── Interfaces/
-│   │       ├── IEmployeeRepository.cs
-│   │       └── IPayrollRepository.cs
+│   │   │   ├── PayrollService.cs
+│   │   │   ├── TimesheetService.cs
+│   │   │   ├── DepartmentService.cs       # Validation + deletion protection
+│   │   │   ├── LeaveService.cs            # Leave workflow + balance management
+│   │   │   └── AuditService.cs            # Automatic change logging
+│   │   ├── Interfaces/
+│   │   │   ├── IEmployeeRepository.cs
+│   │   │   ├── IDepartmentRepository.cs
+│   │   │   ├── ILeaveRepository.cs
+│   │   │   └── IAuditRepository.cs
+│   │   ├── Exceptions/
+│   │   │   ├── NotFoundException.cs
+│   │   │   └── ValidationException.cs
+│   │   └── DependencyInjection.cs         # AddCore() extension
 │   │
 │   ├── DayforceLite.Infrastructure/       # Data access layer
 │   │   ├── Data/
 │   │   │   ├── AdoEmployeeRepository.cs   # ADO.NET — direct SQL
+│   │   │   ├── AdoDepartmentRepository.cs # ADO.NET for departments
 │   │   │   ├── EfTimesheetRepository.cs   # EF Core
+│   │   │   ├── EfLeaveRepository.cs       # EF Core for leave
+│   │   │   ├── EfAuditRepository.cs       # EF Core for audit logs
 │   │   │   └── DayforceDbContext.cs
 │   │   ├── Search/
 │   │   │   └── ElasticSearchService.cs    # Elastic Search integration
-│   │   └── Migrations/                    # EF Core migrations
+│   │   └── DependencyInjection.cs         # AddInfrastructure() extension
 │   │
-│   ├── DayforceLite.WCF/                  # WCF SOAP Service
+│   ├── DayforceLite.WCF/                  # WCF SOAP Service (CoreWCF)
 │   │   ├── ILegacyPayrollService.cs       # [ServiceContract]
 │   │   ├── LegacyPayrollService.cs        # [OperationContract] implementations
-│   │   └── Web.config
+│   │   └── PayrollContracts.cs            # Request/Response DTOs
 │   │
-│   └── DayforceLite.Web/                  # Angular frontend
-│       ├── src/
-│       │   ├── app/
-│       │   │   ├── employees/
-│       │   │   │   ├── employee-list/     # Angular component
-│       │   │   │   ├── employee-form/     # Add/edit with jQuery validation
-│       │   │   │   └── employee.service.ts
-│       │   │   ├── timesheets/
-│       │   │   ├── payroll/
-│       │   │   └── auth/
-│       │   └── environments/
-│       └── package.json
+│   └── DayforceLite.Web/                  # Angular frontend (planned)
+│       └── ...
 │
-└── tests/
-    ├── DayforceLite.UnitTests/
-    │   ├── Services/
-    │   │   ├── EmployeeServiceTests.cs    # xUnit + Moq
-    │   │   └── PayrollServiceTests.cs
-    │   └── Controllers/
-    │       └── EmployeeControllerTests.cs
-    └── DayforceLite.IntegrationTests/
-        ├── EmployeeApiTests.cs            # Testcontainers SQL Server
-        └── SearchIntegrationTests.cs
+├── tests/
+│   ├── DayforceLite.UnitTests/            # 74+ unit tests
+│   │   ├── Services/
+│   │   │   ├── EmployeeServiceTests.cs
+│   │   │   ├── PayrollServiceTests.cs
+│   │   │   ├── TimesheetServiceTests.cs
+│   │   │   ├── DepartmentServiceTests.cs
+│   │   │   ├── LeaveServiceTests.cs
+│   │   │   └── AuditServiceTests.cs
+│   │   └── Controllers/
+│   │       └── EmployeeControllerTests.cs
+│   └── DayforceLite.IntegrationTests/
+│       └── EmployeeApiTests.cs            # Testcontainers SQL Server
+│
+├── scripts/
+│   └── schema.sql                         # Full database schema
+│
+├── docker-compose.yml
+└── .github/workflows/ci.yml
 ```
+
+---
+
+## API Endpoints
+
+### Employee Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/employee` | Get all employees |
+| GET | `/api/employee/{id}` | Get employee by ID |
+| POST | `/api/employee` | Create employee |
+| PUT | `/api/employee/{id}` | Update employee |
+| DELETE | `/api/employee/{id}` | Delete employee |
+| GET | `/api/employee/search?q={query}` | Elasticsearch search |
+| GET | `/api/employee/{id}/payroll-summary` | Payroll summary (stored proc) |
+
+### Department Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/department` | Get all departments with employee counts |
+| GET | `/api/department/{id}` | Get department by ID |
+| POST | `/api/department` | Create department |
+| PUT | `/api/department/{id}` | Update department |
+| DELETE | `/api/department/{id}` | Delete (fails if has active employees) |
+
+### Leave/PTO Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/leave/my-requests` | Get current user's leave requests |
+| GET | `/api/leave/pending` | Get pending requests (for approvers) |
+| POST | `/api/leave` | Submit leave request |
+| POST | `/api/leave/{id}/approve` | Approve request |
+| POST | `/api/leave/{id}/reject` | Reject request |
+| POST | `/api/leave/{id}/cancel` | Cancel own request |
+| GET | `/api/leave/balance` | Get current user's leave balance |
+| GET | `/api/leave/types` | Get available leave types |
+
+### Audit Trail
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/audit/recent?count=100` | Get recent audit logs |
+| GET | `/api/audit/entity/{type}/{id}` | Get entity change history |
+| GET | `/api/audit/user/{userId}` | Get user's activity |
+| GET | `/api/audit/date-range` | Query by date range |
+
+### Other Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | JWT login |
+| POST | `/api/auth/refresh` | Refresh token |
+| GET | `/api/health` | Health check |
+| GET | `/api/health/ready` | Readiness check |
 
 ---
 
 ## Database Schema (SQL Server)
 
 ```sql
--- Run this to create the schema
-
+-- Core tables
 CREATE TABLE Departments (
     DepartmentId    INT IDENTITY(1,1) PRIMARY KEY,
     Name            NVARCHAR(100) NOT NULL,
     CostCentre      NVARCHAR(20)  NOT NULL,
-    CreatedAt       DATETIME2     DEFAULT GETUTCDATE()
+    Description     NVARCHAR(500) NULL,
+    ManagerId       INT           NULL,
+    IsActive        BIT           DEFAULT 1,
+    CreatedAt       DATETIME2     DEFAULT GETUTCDATE(),
+    UpdatedAt       DATETIME2     NULL
 );
 
 CREATE TABLE Employees (
@@ -114,7 +208,7 @@ CREATE TABLE Employees (
     StartDate       DATE          NOT NULL,
     IsActive        BIT           DEFAULT 1,
     CreatedAt       DATETIME2     DEFAULT GETUTCDATE(),
-    RowVersion      ROWVERSION    -- optimistic concurrency
+    RowVersion      ROWVERSION
 );
 
 CREATE TABLE Timesheets (
@@ -123,7 +217,7 @@ CREATE TABLE Timesheets (
     WeekStartDate   DATE          NOT NULL,
     RegularHours    DECIMAL(5,2)  NOT NULL,
     OvertimeHours   DECIMAL(5,2)  DEFAULT 0,
-    Status          NVARCHAR(20)  DEFAULT 'Draft', -- Draft/Submitted/Approved
+    Status          NVARCHAR(20)  DEFAULT 'Draft',
     SubmittedAt     DATETIME2,
     ApprovedAt      DATETIME2,
     ApprovedBy      INT           REFERENCES Employees(EmployeeId)
@@ -140,6 +234,51 @@ CREATE TABLE PayrollRecords (
     ProcessedAt     DATETIME2     DEFAULT GETUTCDATE()
 );
 
+-- Leave Management tables
+CREATE TABLE LeaveRequests (
+    LeaveRequestId  INT IDENTITY(1,1) PRIMARY KEY,
+    EmployeeId      INT           NOT NULL REFERENCES Employees(EmployeeId),
+    LeaveType       NVARCHAR(20)  NOT NULL, -- Vacation/Sick/Personal/Bereavement/Unpaid
+    StartDate       DATE          NOT NULL,
+    EndDate         DATE          NOT NULL,
+    TotalDays       DECIMAL(5,2)  NOT NULL,
+    Reason          NVARCHAR(500) NULL,
+    Status          NVARCHAR(20)  DEFAULT 'Pending', -- Pending/Approved/Rejected/Cancelled
+    ApprovedBy      INT           NULL REFERENCES Employees(EmployeeId),
+    ApprovedAt      DATETIME2     NULL,
+    ApproverComments NVARCHAR(500) NULL,
+    CreatedAt       DATETIME2     DEFAULT GETUTCDATE(),
+    UpdatedAt       DATETIME2     NULL
+);
+
+CREATE TABLE LeaveBalances (
+    LeaveBalanceId  INT IDENTITY(1,1) PRIMARY KEY,
+    EmployeeId      INT           NOT NULL REFERENCES Employees(EmployeeId),
+    Year            INT           NOT NULL,
+    VacationDays    DECIMAL(5,2)  NOT NULL DEFAULT 15,
+    SickDays        DECIMAL(5,2)  NOT NULL DEFAULT 10,
+    PersonalDays    DECIMAL(5,2)  NOT NULL DEFAULT 3,
+    VacationUsed    DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    SickUsed        DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    PersonalUsed    DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    UpdatedAt       DATETIME2     DEFAULT GETUTCDATE(),
+    CONSTRAINT UQ_LeaveBalance_Employee_Year UNIQUE (EmployeeId, Year)
+);
+
+-- Audit Trail table
+CREATE TABLE AuditLogs (
+    AuditLogId      BIGINT IDENTITY(1,1) PRIMARY KEY,
+    EntityType      NVARCHAR(50)  NOT NULL,
+    EntityId        NVARCHAR(50)  NOT NULL,
+    Action          NVARCHAR(20)  NOT NULL,
+    OldValues       NVARCHAR(MAX) NULL,
+    NewValues       NVARCHAR(MAX) NULL,
+    UserId          INT           NULL,
+    UserName        NVARCHAR(100) NULL,
+    Timestamp       DATETIME2     DEFAULT GETUTCDATE(),
+    IpAddress       NVARCHAR(45)  NULL
+);
+
 -- Stored procedure (ADO.NET calls this)
 CREATE PROCEDURE usp_GetEmployeePayrollSummary
     @EmployeeId INT,
@@ -150,14 +289,14 @@ BEGIN
     SELECT 
         e.EmployeeId,
         e.FirstName + ' ' + e.LastName AS FullName,
-        SUM(p.GrossPay)  AS TotalGross,
-        SUM(p.NetPay)    AS TotalNet,
-        COUNT(*)         AS PayslipCount
+        ISNULL(SUM(p.GrossPay), 0)  AS TotalGross,
+        ISNULL(SUM(p.NetPay), 0)    AS TotalNet,
+        COUNT(p.PayrollId)          AS PayslipCount
     FROM Employees e
-    JOIN PayrollRecords p ON e.EmployeeId = p.EmployeeId
+    LEFT JOIN PayrollRecords p ON e.EmployeeId = p.EmployeeId
+        AND p.PeriodStart >= @FromDate
+        AND p.PeriodEnd   <= @ToDate
     WHERE e.EmployeeId = @EmployeeId
-      AND p.PeriodStart >= @FromDate
-      AND p.PeriodEnd   <= @ToDate
     GROUP BY e.EmployeeId, e.FirstName, e.LastName;
 END
 ```
@@ -490,44 +629,64 @@ jobs:
 
 ---
 
-## What to Build First (Priority Order)
+## Implementation Status
 
-**Step 1 — Database + ADO.NET layer (2-3 hrs)**
-- Run schema.sql in SQL Server
-- Implement `AdoEmployeeRepository.cs` with GetById and GetAll
-- Write 3 unit tests
-
-**Step 2 — ASP.NET Core REST API (2-3 hrs)**
-- EmployeeController with GET/POST/PUT/DELETE
-- JWT auth middleware
-- Test with Postman
-
-**Step 3 — WCF Service (1-2 hrs)**
-- ILegacyPayrollService + implementation
-- Host in a separate project
-- Test with WCF Test Client
-
-**Step 4 — Angular Frontend (3-4 hrs)**
-- employee-list and employee-form components
-- jQuery for form validation + tooltips
-- Connect to API via HttpClient
-
-**Step 5 — Elastic Search (1-2 hrs)**
-- Run via docker-compose
-- Index employees on create/update
-- Wire up search endpoint
-
-**Step 6 — Docker + GitHub Actions (1 hr)**
-- docker-compose up (everything starts)
-- Push to GitHub, Actions runs tests
-
-**Total estimate: 10-15 hours across a weekend**
+| Component | Status | Details |
+|-----------|--------|---------|
+| Database Schema | ✅ Complete | Full schema with 7 tables, indexes, stored procedures |
+| ADO.NET Repositories | ✅ Complete | Employee and Department repos with parameterized SQL |
+| EF Core Repositories | ✅ Complete | Timesheet, Payroll, Leave, Audit repos |
+| Core Services | ✅ Complete | 6 services with business logic and validation |
+| REST API Controllers | ✅ Complete | 8 controllers with JWT auth |
+| WCF/CoreWCF Service | ✅ Complete | Legacy payroll SOAP endpoints |
+| Unit Tests | ✅ Complete | 74+ tests with xUnit and Moq |
+| Integration Tests | ✅ Complete | Testcontainers with skip-safe Docker handling |
+| Docker Setup | ✅ Complete | docker-compose with API, SQL, Elasticsearch |
+| CI Pipeline | ✅ Complete | GitHub Actions for build/test |
+| Angular Frontend | 🔲 Planned | Components for employee, timesheet, leave management |
 
 ---
 
-## Resume Bullet Points (already in your resume — this is what the project proves)
+## Getting Started
+
+### Prerequisites
+- .NET 8 SDK
+- SQL Server 2022 (or Docker)
+- Docker Desktop (optional, for containerized setup)
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/K-riti/DayforceLite.git
+cd DayforceLite
+
+# Restore and build
+dotnet restore
+dotnet build
+
+# Run unit tests
+dotnet test tests/DayforceLite.UnitTests
+
+# Start with Docker (includes SQL Server + Elasticsearch)
+docker-compose up -d
+
+# Or run the API directly (requires local SQL Server)
+cd src/DayforceLite.API
+dotnet run
+```
+
+### API Access
+- Swagger UI: `https://localhost:5001/swagger`
+- Health Check: `https://localhost:5001/api/health`
+
+---
+
+## Resume Bullet Points
 
 - Full-stack .NET 8 / ASP.NET Core application with Angular + TypeScript frontend, jQuery, ADO.NET, WCF, REST and SOAP endpoints, SQL Server, and Elastic Search
 - End-to-end SDLC: schema design, C# service/repository layers, Angular components, xUnit unit + integration tests with 85%+ coverage
 - Secure coding throughout: parameterised queries, JWT auth, input validation
 - Performance optimised SQL queries via execution plans and indexing; Elastic Search full-text search across 100k+ records with sub-100ms response
+- Leave/PTO management system with approval workflow, balance tracking, and overlap detection
+- Audit trail system with automatic change logging, user tracking, and IP capture
